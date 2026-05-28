@@ -17,7 +17,7 @@ O pipeline foi projetado sob três pilares práticos para otimizar o aprendizado
 
 * **Otimização de Infraestrutura e I/O**: Extração direta do dataset compactado do Google Drive para o SSD NVMe local da máquina virtual (`/content/`), eliminando gargalos de leitura de disco e acelerando o tempo de época na GPU T4.
 * **Alta Capacidade Geométrica (`ch_base = 128`)**: Alargamento dos canais convolucionais internos e remoção completa de camadas lineares (`nn.Linear`) iniciais. O ruído entra direto como um mapa de recursos quadridimensional, permitindo que a rede retenha traços complexos (olhos, contornos e cabelos nítidos).
-* **Estabilidade Adversarial Ativa (`AdamW` + Taxas Assimétricas)**: Uso do otimizador `AdamW` com decaimento de peso (*weight decay*) para mitigar artefatos xadrez repetitivos e calibração fina das taxas de aprendizado (mantendo o Discriminador 4 vezes mais lento que o Gerador).
+* **Estabilidade Adversarial Ativa (`AdamW` + Taxas Assimétricas)**: Uso do otimizador `AdamW` com decaimento de peso (*weight decay*) para mitigar artefatos xadrez repetitivos e calibração fina das taxas de aprendizado (mantendo o Discriminador 10 vezes mais lento que o Gerador para estabilização de longo prazo).
 
 ---
 
@@ -44,14 +44,14 @@ Reduz a imagem real ou sintética de $64\times64 \times 3$ por meio de Convoluç
 | **Tamanho do Lote (`batch_size`)** | `64` | Equilíbrio entre estabilidade do gradiente e uso de memória da GPU. |
 | **Canais Base (`ch_base`)** | `128` | Filtros dobrados para evitar borrões e enriquecer texturas de rostos. |
 | **Otimizador** | `AdamW` | Desacopla o decaimento de peso (`1e-5`), eliminando artefatos repetitivos. |
-| **Taxa de Aprendizado do Gerador** | `0.0002` | Ritmo padrão estável com momentum `betas=(0.5, 0.999)`. |
-| **Taxa de Aprendizado do Discriminador** | `0.00005` | Reduzida para 1/4 da taxa do Gerador para evitar dominância precoce. |
+| **Taxa de Aprendizado do Gerador** | `0.0005` | Ritmo otimizado para extração de detalhes com momentum `betas=(0.5, 0.999)`. |
+| **Taxa de Aprendizado do Discriminador** | `0.00005` | Reduzida via TTUR para conter o avanço do crítico e evitar estagnação. |
 
 ---
 
 ## 🔬 Validação Científica (Espaço Latente)
 
-Para comprovar que o modelo de fato aprendeu a topologia de distribuição dos rostos e não apenas memorizou o dataset, o código inclui um teste de **Interpolação Linear Contínua**.
+Para comprovar que o modelo de fato aprendeu a topologia de distribuição dos rostos e não apenas memorizou o dataset (*overfitting*), o código inclui um teste de **Interpolação Linear Contínua**.
 
 Dada a amostragem de dois vetores distintos $z_1$ e $z_2$ no hiperespaço quadridimensional, calculamos caminhos intermediários ponderados por um coeficiente $\alpha \in [0, 1]$:
 
@@ -65,7 +65,8 @@ Se a transição visual exibida na tela for contínua e suave (com feições, co
 
 ```text
 ├── .github/
-├── data/                  # Pasta criada localmente na execução para o dataset
-├── images_dgan/           # Diretório onde as grades visuais por época são salvas
-├── main.ipynb             # Notebook contendo o pipeline completo executado no Colab
-└── README.md              # Documentação do projeto
+├── anime_data/               # Pasta de extração local NVMe das imagens brutas
+├── anime_data_curado/        # Dataset filtrado contendo apenas links simbólicos unifaciais
+├── images_dgan/              # Diretório onde as grades visuais (5x5) por época são salvas
+├── main.ipynb                # Notebook contendo o pipeline completo executado no Colab
+└── README.md                 # Documentação do projeto
